@@ -8,11 +8,23 @@ apt-get update
 # Install NGINX
 apt-get install -y nginx
 
+# Install AWS CLI
+apt-get install -y awscli
+
+# Configure AWS CLI with IAM role (assuming the instance has an IAM role with the necessary permissions)
+REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+
+# Get the IMDSv2 token
+TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+
 # Get the instance ID
-INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+INSTANCE_ID=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/instance-id)
 
 # Get the availability zone
-AVAILABILITY_ZONE=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+AVAILABILITY_ZONE=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+# Get the instance name (requires IAM role with ec2:DescribeTags permission)
+INSTANCE_NAME=$(aws ec2 describe-tags --region $REGION --filters "Name=resource-id,Values=$INSTANCE_ID" "Name=key,Values=Name" --query "Tags[0].Value" --output text)
 
 # Get the CPU load
 CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}')
@@ -45,16 +57,20 @@ cat <<EOF > /var/www/html/index.html
             <td>Availability Zone</td>
             <td>$AVAILABILITY_ZONE</td>
         </tr>
+        <tr>
+            <td>Instance Name</td>
+            <td>$INSTANCE_NAME</td>
+        </tr>
     </table>
     <h2>Current CPU Load: $CPU_LOAD</h2>
 </body>
 </html>
 EOF
-```
 
 # Restart NGINX to apply changes
-
 systemctl restart nginx
+
+```
 
 ### Instructions to Use the Script in User Data
 
