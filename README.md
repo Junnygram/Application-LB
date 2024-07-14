@@ -57,10 +57,7 @@ cat <<EOF > /var/www/html/index.html
             <td>Availability Zone</td>
             <td>$AVAILABILITY_ZONE</td>
         </tr>
-        <tr>
-            <td>Instance Name</td>
-            <td>$INSTANCE_NAME</td>
-        </tr>
+    
     </table>
     <h2>Current CPU Load: $CPU_LOAD</h2>
 </body>
